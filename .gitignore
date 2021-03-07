@@ -1,0 +1,12 @@
+# generated local .terraform dir
+.terraform/*
+
+# tf state files
+*.tfstate*
+
+# tfvars files might contain sensitive data
+*.tfvars
+
+# vscode files
+.vscode/*
+
