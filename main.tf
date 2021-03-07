@@ -6,6 +6,7 @@ variable "region" {}
 variable "vpc_cidr_block" {}
 variable "subnet_cidr_block" {}
 variable "avail_zone" {}
+variable "my_ip" {}
 variable "env_prefix" {
   description = "variable to hold environment"
   type        = string
@@ -21,6 +22,7 @@ variable "env_prefix" {
 
 resource "aws_vpc" "app_vpc" {
   cidr_block = var.vpc_cidr_block
+
   tags = {
     Name : "${var.env_prefix}-vpc"
   }
@@ -29,6 +31,7 @@ resource "aws_subnet" "app_subnet_1" {
   vpc_id            = aws_vpc.app_vpc.id
   cidr_block        = var.subnet_cidr_block
   availability_zone = var.avail_zone
+
   tags = {
     Name : "${var.env_prefix}-app_subnet_1"
   }
@@ -36,10 +39,12 @@ resource "aws_subnet" "app_subnet_1" {
 
 resource "aws_route_table" "app_rtbl" {
   vpc_id = aws_vpc.app_vpc.id
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.app_igw.id
   }
+
   tags = {
     Name : "${var.env_prefix}-rtbl"
   }
@@ -47,6 +52,7 @@ resource "aws_route_table" "app_rtbl" {
 
 resource "aws_internet_gateway" "app_igw" {
   vpc_id = aws_vpc.app_vpc.id
+
   tags = {
     Name : "${var.env_prefix}-igw"
   }
@@ -68,3 +74,34 @@ resource "aws_route_table_association" "assoc-rtbll-subnet" {
 #     Name : "${var.env_prefix}-main_rtbl"
 #   }
 # }
+
+resource "aws_security_group" "app-sg" {
+  name   = "app-sg"
+  vpc_id = aws_vpc.app_vpc.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.my_ip]
+  }
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"]
+    prefix_list_ids = []
+  }
+
+  tags = {
+    Name : "${var.env_prefix}-sg"
+  }
+}
