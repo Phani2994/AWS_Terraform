@@ -11,14 +11,8 @@ variable "env_prefix" {
   description = "variable to hold environment"
   type        = string
 }
-
-# variable "cidrblocks" {
-#   description = "variable to hold cidrblocks and name tags of vpc and subnet"
-#   type = list(object({
-#     cidrblock = string,
-#     name      = string
-#   }))
-# }
+variable "instance_type" {}
+variable "public_key_location" {}
 
 resource "aws_vpc" "app_vpc" {
   cidr_block = var.vpc_cidr_block
@@ -103,5 +97,48 @@ resource "aws_security_group" "app-sg" {
 
   tags = {
     Name : "${var.env_prefix}-sg"
+  }
+}
+
+data "aws_ami" "latest-amazon-linux-image" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+# output "aws_ami_id" {
+#   value = data.aws_ami.latest-amazon-linux-image
+# }
+
+output "ec2_public_ip" {
+  value = aws_instance.app_server.public_ip
+}
+
+resource "aws_key_pair" "ssh-key" {
+  key_name   = "key_pair_2"
+  public_key = file(var.public_key_location)
+}
+resource "aws_instance" "app_server" {
+  ami           = data.aws_ami.latest-amazon-linux-image.id
+  instance_type = var.instance_type
+
+  subnet_id              = aws_subnet.app_subnet_1.id
+  vpc_security_group_ids = [aws_security_group.app-sg.id]
+  availability_zone      = var.avail_zone
+
+  associate_public_ip_address = true
+  key_name                    = aws_key_pair.ssh-key.key_name
+
+  user_data = file("user_data_code.sh")
+
+  tags = {
+    Name : "${var.env_prefix}-sever"
   }
 }
