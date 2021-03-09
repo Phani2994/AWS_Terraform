@@ -10,3 +10,6 @@
 # vscode files
 .vscode/*
 
+# crash log
+crash.log
+
